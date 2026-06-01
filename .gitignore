@@ -1,4 +1,7 @@
-.[Vv]s/
+git remote add origin https://github.com/alvarodavicino9/PROYECTO_BENDITOBAJON.git.[Vv]s/
 bin/
 obj/
 App_Data/
+node_modules
+node_modules
+node_modules
