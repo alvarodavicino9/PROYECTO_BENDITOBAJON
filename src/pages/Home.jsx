@@ -3,11 +3,7 @@ import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform, useInView } from 'framer-motion'
 import { ChevronDown, MapPin, Clock, Bike } from 'lucide-react'
 import { WA_LINK, WA_MSG_INFO, WA_MSG_DELIVERY, waLink, WAIT_TIME_MIN, WAIT_TIME_MAX } from '../data'
-
-function isOpen() {
-  const d = new Date(), day = d.getDay(), m = d.getHours()*60+d.getMinutes()
-  return [0,4,5,6].includes(day) && m >= 1260 && m < 1380
-}
+import { useIsOpen } from '../hooks/useIsOpen'
 
 const fadeUp = { hidden:{opacity:0,y:40}, visible:{opacity:1,y:0,transition:{duration:0.6,ease:[0.16,1,0.3,1]}} }
 const stagger = { visible:{transition:{staggerChildren:0.12}} }
@@ -141,7 +137,7 @@ export default function Home() {
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
   const y = useTransform(scrollYProgress, [0,1], [0, 100])
   const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0])
-  const open = isOpen()
+  const open = useIsOpen()
 
   return (
     <>
@@ -159,29 +155,30 @@ export default function Home() {
 
         <motion.div style={{ y, opacity }} className="relative z-10 flex flex-col items-center w-full">
 
-          {/* Status pill */}
+          {/* Status pill — reactivo, respeta LOCAL_ABIERTO_OVERRIDE */}
           <motion.div
             initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.1 }}
-            className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-2 mb-8 backdrop-blur"
+            className={`inline-flex items-center gap-2.5 border rounded-full px-4 py-2 mb-6 backdrop-blur transition-colors duration-700 ${
+              open
+                ? 'bg-green-500/10 border-green-500/30'
+                : 'bg-white/5 border-white/10'
+            }`}
           >
-            <span className={`w-2 h-2 rounded-full block flex-shrink-0 ${open ? 'bg-green-400 animate-pulse-dot' : 'bg-red-400'}`} />
-            <span className="text-xs text-white/65 font-bold">
-              {open ? 'Abierto ahora · cierra a las 23:00' : 'Cerrado · abre Jue–Dom 21:00'}
+            <span className={`w-2 h-2 rounded-full block flex-shrink-0 ${open ? 'bg-green-400 animate-pulse-dot' : 'bg-red-400/70'}`} />
+            <span className={`text-xs font-black tracking-wide ${open ? 'text-green-400' : 'text-white/50'}`}>
+              {open
+                ? `Abierto · cierra a las 23:00`
+                : 'Cerrado · abre Jue–Dom 21:00 hs'}
             </span>
-          </motion.div>
-
-          {/* Wait time badge — only when open */}
-          {open && (
-            <motion.div
-              initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.18 }}
-              className="inline-flex items-center gap-2 bg-orange-500/10 border border-orange-500/25 rounded-full px-4 py-1.5 mb-6 backdrop-blur"
-            >
-              <span className="text-lg">⏱️</span>
-              <span className="text-xs text-orange-300 font-black">
-                Tiempo estimado: {WAIT_TIME_MIN}–{WAIT_TIME_MAX} min
+            {open && (
+              <span className="text-white/30 text-xs">·</span>
+            )}
+            {open && (
+              <span className="text-orange-400 text-xs font-black">
+                {WAIT_TIME_MIN}–{WAIT_TIME_MAX} min
               </span>
-            </motion.div>
-          )}
+            )}
+          </motion.div>
 
           {/* Logo */}
           <motion.img
@@ -287,14 +284,19 @@ export default function Home() {
 
           {/* Preview strip */}
           <div className="mt-16 flex gap-4 overflow-hidden justify-center">
-            {['/img/burg1.png','/img/burg2.png','/img/burg3.png','/img/burg4.png'].map((src, i) => (
+            {[
+              { src: '/img/burg1.png', alt: 'Burger Clásica — cheddar, lechuga, tomate y aderezo Bendito' },
+              { src: '/img/burg2.png', alt: 'Burger Oklahoma — carne smasheada con cebolla caramelizada' },
+              { src: '/img/burg3.png', alt: 'Burger Cuarto — ketchup, mostaza y cebollita' },
+              { src: '/img/burg4.png', alt: 'Burger Extra Cheddar — triple cheddar y aderezo Bendito' },
+            ].map(({ src, alt }, i) => (
               <motion.div key={i}
                 initial={{ opacity:0, y:40 }} whileInView={{ opacity:1, y:0 }}
                 viewport={{ once:true }} transition={{ delay: i*0.1, duration:0.6 }}
                 whileHover={{ y:-8, scale:1.04 }}
                 className="flex-shrink-0 w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden border border-white/10 shadow-2xl"
               >
-                <img src={src} alt="Hamburguesa" className="w-full h-full object-cover" />
+                <img src={src} alt={alt} loading="lazy" decoding="async" className="w-full h-full object-cover" />
               </motion.div>
             ))}
           </div>

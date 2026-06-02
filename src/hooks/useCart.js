@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { WA_NUMBER } from '../data'
 
 function generateOrderNumber() {
@@ -7,10 +7,31 @@ function generateOrderNumber() {
   return `BB-${pad(now.getDate())}${pad(now.getMonth()+1)}-${pad(now.getHours())}${pad(now.getMinutes())}`
 }
 
+const STORAGE_KEY = 'bendito_cart'
+
+function loadCart() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function saveCart(cart) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cart))
+  } catch {}
+}
+
 export function useCart() {
-  const [cart, setCart]           = useState([])
+  const [cart, setCart]           = useState(loadCart)
   const [cartOpen, setCartOpen]   = useState(false)
-  const [orderSent, setOrderSent] = useState(false)  // controls confirmation screen
+  const [orderSent, setOrderSent] = useState(false)
+
+  useEffect(() => { saveCart(cart) }, [cart])
 
   const addItem = useCallback((item) => {
     setCart(prev => [...prev, { ...item, id: Date.now() }])
@@ -20,24 +41,36 @@ export function useCart() {
     setCart(prev => prev.filter(i => i.id !== id))
   }, [])
 
+  // Reemplaza un ítem completo in-place (para edición desde el modal)
+  const updateItem = useCallback((id, updatedFields) => {
+    setCart(prev => prev.map(i => i.id === id ? { ...i, ...updatedFields } : i))
+  }, [])
+
+  // Sube o baja la cantidad de un ítem; si llega a 0 lo elimina
+  const updateQty = useCallback((id, delta) => {
+    setCart(prev =>
+      prev
+        .map(i => i.id === id ? { ...i, qty: i.qty + delta } : i)
+        .filter(i => i.qty > 0)
+    )
+  }, [])
+
   const clearCart = useCallback(() => {
     setCart([])
     setOrderSent(false)
+    saveCart([])
   }, [])
 
-  const markOrderSent = useCallback(() => {
-    setOrderSent(true)
-  }, [])
+  const markOrderSent = useCallback(() => setOrderSent(true), [])
 
   const count = cart.reduce((a, i) => a + i.qty, 0)
 
-  const countForProduct = useCallback((productId) => {
-    return cart
-      .filter(i => i.product.id === productId)
-      .reduce((a, i) => a + i.qty, 0)
-  }, [cart])
+  const countForProduct = useCallback((productId) =>
+    cart.filter(i => i.product.id === productId).reduce((a, i) => a + i.qty, 0)
+  , [cart])
 
-  const buildWAMessage = useCallback(({ orderType, address, name, phone, paymentMethod }) => {
+  // orderNote = nota general del pedido (campo nuevo del formulario)
+  const buildWAMessage = useCallback(({ orderType, address, name, phone, paymentMethod, orderNote }) => {
     const now = new Date()
     const pad = n => String(n).padStart(2, '0')
     const orderNum = generateOrderNumber()
@@ -70,22 +103,16 @@ export function useCart() {
     }
 
     if (paymentMethod) msg += `• *Método de Pago:* ${paymentMethod}\n`
+    if (orderNote?.trim()) msg += `\n📋 *Nota para el local:* ${orderNote.trim()}\n`
     msg += `\n¡Muchas gracias! Quedo atento a la confirmación. 🙌`
 
     return `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`
   }, [cart])
 
   return {
-    cart,
-    cartOpen,
-    setCartOpen,
-    orderSent,
-    markOrderSent,
-    addItem,
-    removeItem,
-    clearCart,
-    count,
-    countForProduct,
-    buildWAMessage
+    cart, cartOpen, setCartOpen,
+    orderSent, markOrderSent,
+    addItem, removeItem, updateItem, updateQty, clearCart,
+    count, countForProduct, buildWAMessage,
   }
 }

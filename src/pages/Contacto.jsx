@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { MapPin, Clock, Phone } from 'lucide-react'
 import { WA_LINK, IG_LINK, MAPS_LINK, WA_MSG_CONTACTO, WA_MSG_DELIVERY, waLink } from '../data'
+import { useIsOpen } from '../hooks/useIsOpen'
 
 const IgIcon = ({ size = 18, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -34,15 +35,8 @@ const HORARIO = [
   { dia:'Miércoles', hora:'Cerrado',        open:false },
 ]
 
-function isCurrentlyOpen() {
-  const now = new Date()
-  const day = now.getDay()
-  const mins = now.getHours() * 60 + now.getMinutes()
-  return [0,4,5,6].includes(day) && mins >= 1260 && mins < 1380
-}
-
 export default function Contacto() {
-  const open = isCurrentlyOpen()
+  const open = useIsOpen() // hook reactivo — respeta LOCAL_ABIERTO_OVERRIDE y se actualiza cada 60s
   const dayNames = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
   const todayName = dayNames[new Date().getDay()]
 
@@ -153,14 +147,26 @@ export default function Contacto() {
               <div className="text-white font-bold text-lg mb-1">Lavalle y 3 de Febrero</div>
               <div className="text-white/40 font-semibold text-sm mb-4">Ceres, Santa Fe, Argentina</div>
               <div className="rounded-xl overflow-hidden border border-white/10 mb-4" style={{height:140}}>
-                <iframe title="Mapa"
-                  src="https://maps.google.com/maps?q=Ceres,+Santa+Fe,+Argentina&t=&z=14&ie=UTF8&iwloc=&output=embed"
-                  className="w-full h-full border-0" loading="lazy" />
+                <iframe
+                  title="Ubicación de Bendito Bajón — Lavalle y 3 de Febrero, Ceres"
+                  src="https://maps.google.com/maps?q=-29.8853,-61.9447&t=&z=16&ie=UTF8&iwloc=&output=embed"
+                  className="w-full h-full border-0"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  aria-label="Mapa con la ubicación del local"
+                />
               </div>
-              <a href={MAPS_LINK} target="_blank" rel="noopener noreferrer"
-                className="text-orange-400 font-black text-sm hover:text-orange-300 transition-colors">
-                Ver en Google Maps →
-              </a>
+              <div className="flex items-center gap-3">
+                <a href={MAPS_LINK} target="_blank" rel="noopener noreferrer"
+                  className="text-orange-400 font-black text-sm hover:text-orange-300 transition-colors">
+                  Ver en Google Maps →
+                </a>
+                <span className="text-white/15 text-xs">·</span>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=-29.8853,-61.9447" target="_blank" rel="noopener noreferrer"
+                  className="text-white/40 font-black text-sm hover:text-white/70 transition-colors">
+                  Cómo llegar →
+                </a>
+              </div>
             </Card>
 
             <Card delay={0.4}>

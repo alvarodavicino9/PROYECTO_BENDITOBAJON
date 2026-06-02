@@ -1,18 +1,17 @@
-import { useState, useCallback } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import Navbar from './components/Navbar'
-import CartDrawer from './components/CartDrawer'
-import ProductModal from './components/ProductModal'
-import Footer from './components/Footer'
+import { ToastProvider } from './components/Toast'
+import { CartProvider, useCartContext } from './context/CartContext'
+import Navbar        from './components/Navbar'
+import CartDrawer    from './components/CartDrawer'
+import ProductModal  from './components/ProductModal'
+import Footer        from './components/Footer'
 import WhatsAppFloat from './components/WhatsAppFloat'
 import MobileCartBar from './components/MobileCartBar'
-import { ToastProvider, useToast } from './components/Toast'
-import Home from './pages/Home'
-import Menu from './pages/Menu'
+import Home     from './pages/Home'
+import Menu     from './pages/Menu'
 import Nosotros from './pages/Nosotros'
 import Contacto from './pages/Contacto'
-import { useCart } from './hooks/useCart'
 
 function PageWrapper({ children }) {
   return (
@@ -30,24 +29,14 @@ function PageWrapper({ children }) {
 function AppInner() {
   const location = useLocation()
   const {
-    cart, cartOpen, setCartOpen,
-    orderSent, markOrderSent,
-    addItem, removeItem, clearCart,
-    count, countForProduct, buildWAMessage
-  } = useCart()
-
-  const [selectedProduct, setSelectedProduct] = useState(null)
-  const [cartShake, setCartShake] = useState(false)
-  const showToast = useToast()
-
-  const handleAddToCart = useCallback((item) => {
-    addItem(item)
-    setCartShake(true)
-    setTimeout(() => setCartShake(false), 500)
-    showToast(`${item.product.name}${item.size !== 'Unidad' ? ` (${item.size})` : ''} agregado`)
-  }, [addItem, showToast])
-
-  const openCart = useCallback(() => setCartOpen(true), [setCartOpen])
+    cart, cartOpen, orderSent, markOrderSent,
+    removeItem, updateQty, clearCart, buildWAMessage,
+    count, countForProduct,
+    cartShake, selectedProduct, editingItem,
+    setSelectedProduct,
+    handleAddToCart, handleEditItem, handleSaveEdit, handleCloseModal,
+    openCart, closeCart,
+  } = useCartContext()
 
   return (
     <>
@@ -55,8 +44,8 @@ function AppInner() {
 
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
-          <Route path="/" element={<PageWrapper><Home /></PageWrapper>} />
-          <Route path="/menu" element={
+          <Route path="/"         element={<PageWrapper><Home /></PageWrapper>} />
+          <Route path="/menu"     element={
             <PageWrapper>
               <Menu
                 onOpenProduct={setSelectedProduct}
@@ -71,21 +60,24 @@ function AppInner() {
       </AnimatePresence>
 
       <Footer />
-
       <WhatsAppFloat cartCount={count} onCartOpen={openCart} />
       <MobileCartBar count={count} onOpen={openCart} />
 
       <ProductModal
         product={selectedProduct}
-        onClose={() => setSelectedProduct(null)}
+        editingItem={editingItem}
+        onClose={handleCloseModal}
         onAdd={handleAddToCart}
+        onSaveEdit={handleSaveEdit}
       />
 
       <CartDrawer
         cart={cart}
         open={cartOpen}
-        onClose={() => setCartOpen(false)}
+        onClose={closeCart}
         onRemove={removeItem}
+        onUpdateQty={updateQty}
+        onEditItem={handleEditItem}
         buildWAMessage={buildWAMessage}
         orderSent={orderSent}
         markOrderSent={markOrderSent}
@@ -98,7 +90,9 @@ function AppInner() {
 export default function App() {
   return (
     <ToastProvider>
-      <AppInner />
+      <CartProvider>
+        <AppInner />
+      </CartProvider>
     </ToastProvider>
   )
 }
